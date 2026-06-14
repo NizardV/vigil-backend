@@ -11,7 +11,7 @@ from db.session import AsyncSessionLocal
 from db.models import Article, Analysis, Source, Theme, Digest, Webhook, Feedback
 from services.llm import analyze_article, generate_digest
 from services.embeddings import get_embedding
-from services.webhook import send_discord
+from services.webhook import send_discord, send_discord_article
 
 # ── Setup Celery ──────────────────────────────────────────
 
@@ -244,7 +244,21 @@ def send_digest(theme_id: int):
             webhooks = webhooks_result.scalars().all()
 
             for webhook in webhooks:
+                # 1. Envoie le digest global
                 await send_discord(webhook.url, digest_content, theme.name)
+
+                # 2. Envoie chaque article avec boutons de feedback
+                for article, analysis in rows:
+                    await send_discord_article(
+                        webhook_url=webhook.url,
+                        article_id=article.id,
+                        title=article.title,
+                        url=article.url,
+                        summary=analysis.summary or "",
+                        score=analysis.relevance_score or 0,
+                        theme_name=theme.name,
+                        app_id="",
+                    )
 
             await db.commit()
 
