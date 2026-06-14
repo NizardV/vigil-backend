@@ -15,6 +15,8 @@ class Theme(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     keywords: Mapped[list[str] | None] = mapped_column(ARRAY(String))
+    digest_hour: Mapped[int] = mapped_column(Integer, default=7)
+    digest_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, default=datetime.utcnow)
 
     sources: Mapped[list["Source"]] = relationship(back_populates="theme", cascade="all, delete")
@@ -29,8 +31,9 @@ class Source(Base):
     theme_id: Mapped[int] = mapped_column(ForeignKey("themes.id", ondelete="CASCADE"))
     name: Mapped[str | None] = mapped_column(String(100))
     url: Mapped[str] = mapped_column(Text, nullable=False)
-    type: Mapped[str] = mapped_column(String(20), default="rss")  # rss | scrape
+    type: Mapped[str] = mapped_column(String(20), default="rss")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    fetch_interval_hours: Mapped[int] = mapped_column(Integer, default=2)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, default=datetime.utcnow)
 
     theme: Mapped["Theme"] = relationship(back_populates="sources")
@@ -109,4 +112,3 @@ class Webhook(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     theme: Mapped["Theme"] = relationship(back_populates="webhooks")
-

@@ -1,5 +1,5 @@
 ﻿from datetime import datetime
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 
 
 # ── Themes ──────────────────────────────────────────────
@@ -8,6 +8,8 @@ class ThemeCreate(BaseModel):
     name: str
     description: str | None = None
     keywords: list[str] | None = None
+    digest_hour: int = 7
+    digest_enabled: bool = True
 
 class ThemeOut(ThemeCreate):
     id: int
@@ -24,6 +26,7 @@ class SourceCreate(BaseModel):
     url: str
     type: str = "rss"
     active: bool = True
+    fetch_interval_hours: int = 2
 
 class SourceOut(SourceCreate):
     id: int
@@ -58,7 +61,7 @@ class ArticleOut(BaseModel):
 
 class FeedbackCreate(BaseModel):
     article_id: int
-    rating: int   # 1 ou -1
+    rating: int
     comment: str | None = None
 
 class FeedbackOut(FeedbackCreate):
@@ -92,4 +95,3 @@ class WebhookOut(WebhookCreate):
     id: int
     class Config:
         from_attributes = True
-
