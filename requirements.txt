@@ -1,0 +1,30 @@
+﻿# API
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+
+# BDD
+sqlalchemy==2.0.30
+asyncpg==0.29.0
+alembic==1.13.1
+psycopg2-binary==2.9.9
+pgvector==0.3.2
+
+# Celery
+celery==5.4.0
+redis==5.0.6
+
+# LLM
+google-generativeai==0.7.2
+
+# RSS
+feedparser==6.0.11
+httpx==0.27.0
+
+# Embeddings
+sentence-transformers==3.0.1
+
+# Utils
+pydantic==2.7.1
+pydantic-settings==2.3.1
+python-dotenv==1.0.1
+
