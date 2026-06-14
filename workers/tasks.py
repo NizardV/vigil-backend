@@ -147,7 +147,7 @@ def process_article(self, article_id: int):
             )
 
             # Embedding pgvector
-            text_for_embedding = f"{article.title} {analysis_data[''summary'']}"
+            text_for_embedding = f"{article.title} {analysis_data['summary']}"
             embedding = get_embedding(text_for_embedding)
 
             # Sauvegarde analyse
@@ -265,9 +265,9 @@ async def _get_feedback_context(db, theme_id: int) -> str:
 
     context = ""
     if liked:
-        context += f"Articles appréciés (👍) : {'', ''.join(liked[:5])}\n"
+        context += f"Articles apprecies : {', '.join(liked[:5])}\n"
     if disliked:
-        context += f"Articles non pertinents (👎) : {'', ''.join(disliked[:5])}\n"
+        context += f"Articles non pertinents : {', '.join(disliked[:5])}\n"
 
     return context
 

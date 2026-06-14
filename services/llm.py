@@ -8,25 +8,27 @@ PROMPT_VERSION = "v1.0"
 
 
 def _build_system_prompt(theme_name: str, keywords: list[str], feedback_context: str = "") -> str:
-    base = f"""Tu es un assistant de veille technologique spécialisé sur le thème : "{theme_name}".
-Mots-clés associés : {'', ''.join(keywords) if keywords else ''non définis''}.
+    keywords_str = ", ".join(keywords) if keywords else "not defined"
 
-Ta mission :
-1. Résumer l''article en 2-3 phrases claires et concises en français.
-2. Attribuer un score de pertinence de 1 à 10 par rapport au thème donné.
-   - 1-3 : hors sujet ou très faiblement lié
-   - 4-6 : partiellement pertinent
-   - 7-10 : très pertinent, article à lire absolument
-
-Réponds UNIQUEMENT en JSON valide, sans markdown, sans explication, avec ce format exact :
-{{
-  "summary": "résumé de l''article",
-  "relevance_score": 7.5,
-  "theme_match": "sous-thème identifié"
-}}"""
+    base = (
+        f'You are a tech watch assistant specialized on the theme: "{theme_name}".\n'
+        f"Associated keywords: {keywords_str}.\n\n"
+        "Your mission:\n"
+        "1. Summarize the article in 2-3 clear and concise sentences in French.\n"
+        "2. Assign a relevance score from 1 to 10 based on the given theme.\n"
+        "   - 1-3: off-topic or weakly related\n"
+        "   - 4-6: partially relevant\n"
+        "   - 7-10: highly relevant, must-read article\n\n"
+        "Respond ONLY with valid JSON, no markdown, no explanation:\n"
+        '{\n'
+        '  "summary": "article summary",\n'
+        '  "relevance_score": 7.5,\n'
+        '  "theme_match": "identified sub-theme"\n'
+        '}'
+    )
 
     if feedback_context:
-        base += f"\n\nContexte de préférences utilisateur (basé sur les feedbacks précédents) :\n{feedback_context}"
+        base += f"\n\nUser preference context (based on previous feedback):\n{feedback_context}"
 
     return base
 
@@ -38,23 +40,22 @@ async def analyze_article(
     keywords: list[str],
     feedback_context: str = ""
 ) -> dict:
-    """Analyse un article avec Gemini et retourne summary + score."""
+    """Analyze an article with Gemini and return summary + score."""
     model = genai.GenerativeModel(settings.gemini_model)
 
     system_prompt = _build_system_prompt(theme_name, keywords, feedback_context)
-    user_message = f"Titre : {title}\n\nContenu :\n{content[:3000]}"  # limite tokens
+    user_message = f"Title: {title}\n\nContent:\n{content[:3000]}"
 
     response = model.generate_content(
         f"{system_prompt}\n\n{user_message}",
         generation_config=genai.GenerationConfig(
-            temperature=0.2,  # réponses cohérentes et factuelles
+            temperature=0.2,
             max_output_tokens=512,
         )
     )
 
     raw = response.text.strip()
 
-    # Nettoyage au cas où Gemini ajoute des backticks
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
@@ -71,26 +72,23 @@ async def analyze_article(
 
 
 async def generate_digest(articles: list[dict], theme_name: str) -> str:
-    """Génère un digest quotidien à partir des meilleurs articles."""
+    """Generate a daily digest from the top articles."""
     model = genai.GenerativeModel(settings.gemini_model)
 
     articles_text = "\n\n".join([
-        f"- [{a[''title'']}]({a[''url'']}) — Score: {a[''score'']}/10\n  {a[''summary'']}"
+        f"- [{a['title']}]({a['url']}) - Score: {a['score']}/10\n  {a['summary']}"
         for a in articles
     ])
 
-    prompt = f"""Tu génères un digest quotidien de veille technologique sur le thème : "{theme_name}".
-
-Voici les articles du jour triés par pertinence :
-{articles_text}
-
-Génère un résumé structuré en français avec :
-1. Une introduction en 1 phrase sur les tendances du jour
-2. Les 3 points clés à retenir
-3. Une conclusion en 1 phrase
-
-Format markdown, ton professionnel mais accessible."""
+    prompt = (
+        f'Generate a daily tech watch digest on the theme: "{theme_name}".\n\n'
+        f"Today's articles sorted by relevance:\n{articles_text}\n\n"
+        "Generate a structured summary in French with:\n"
+        "1. A one-sentence introduction on today's trends\n"
+        "2. The 3 key takeaways\n"
+        "3. A one-sentence conclusion\n\n"
+        "Markdown format, professional but accessible tone."
+    )
 
     response = model.generate_content(prompt)
     return response.text
-
