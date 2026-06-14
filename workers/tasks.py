@@ -245,7 +245,7 @@ def send_digest(theme_id: int):
 
             for webhook in webhooks:
                 # 1. Envoie le digest global
-                await send_discord(webhook.url, digest_content, theme.name)
+                await send_discord(webhook.url, digest_content, theme.name, bot_token=settings.discord_bot_token)
 
                 # 2. Envoie chaque article avec boutons de feedback
                 for article, analysis in rows:
@@ -257,7 +257,7 @@ def send_digest(theme_id: int):
                         summary=analysis.summary or "",
                         score=analysis.relevance_score or 0,
                         theme_name=theme.name,
-                        app_id="",
+                        bot_token=settings.discord_bot_token,
                     )
 
             await db.commit()

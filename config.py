@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # Discord
     discord_webhook_url: str = ""
     discord_public_key: str = ""
+    discord_bot_token: str = ""
 
     # Digest schedule
     digest_hour: int = 7
