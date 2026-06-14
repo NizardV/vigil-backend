@@ -1,5 +1,4 @@
 ﻿import json
-import re
 import google.generativeai as genai
 from config import settings
 
@@ -51,15 +50,12 @@ async def analyze_article(
         f"{system_prompt}\n\n{user_message}",
         generation_config=genai.GenerationConfig(
             temperature=0.2,
-            max_output_tokens=512,
+            max_output_tokens=1024,
+            response_mime_type="application/json",
         )
     )
 
     raw = response.text.strip()
-    raw = re.sub(r'^```(?:json)?\s*', '', raw)
-    raw = re.sub(r'\s*```$', '', raw)
-    raw = raw.strip()
-
     result = json.loads(raw)
 
     return {
