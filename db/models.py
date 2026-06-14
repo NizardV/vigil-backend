@@ -65,7 +65,7 @@ class Analysis(Base):
         CheckConstraint("relevance_score BETWEEN 1 AND 10")
     )
     theme_match: Mapped[str | None] = mapped_column(String(100))
-    embedding: Mapped[list[float] | None] = mapped_column(Vector(768))
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(384))
     llm_prompt_version: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, default=datetime.utcnow)
 

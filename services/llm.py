@@ -1,4 +1,5 @@
 ﻿import json
+import re
 import google.generativeai as genai
 from config import settings
 
@@ -55,11 +56,9 @@ async def analyze_article(
     )
 
     raw = response.text.strip()
-
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
+    raw = re.sub(r'^```(?:json)?\s*', '', raw)
+    raw = re.sub(r'\s*```$', '', raw)
+    raw = raw.strip()
 
     result = json.loads(raw)
 
