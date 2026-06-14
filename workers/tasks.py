@@ -28,18 +28,15 @@ app.config_from_object({
 # ── Tâches planifiées ─────────────────────────────────────
 
 app.conf.beat_schedule = {
-    # Collecte RSS toutes les 2 heures
-    "fetch-rss-every-2h": {
+    # Vérifie toutes les heures quelles sources collecter
+    "check-sources-every-hour": {
         "task": "workers.tasks.fetch_all_sources",
-        "schedule": crontab(minute=0, hour="*/2"),
+        "schedule": crontab(minute=0),
     },
-    # Digest quotidien (heure configurable via .env)
-    "daily-digest": {
+    # Vérifie toutes les heures quels digests envoyer
+    "check-digests-every-hour": {
         "task": "workers.tasks.send_all_digests",
-        "schedule": crontab(
-            minute=settings.digest_minute,
-            hour=settings.digest_hour
-        ),
+        "schedule": crontab(minute=0),
     },
 }
 
@@ -56,6 +53,8 @@ def run_async(coro):
 @app.task(name="workers.tasks.fetch_all_sources")
 def fetch_all_sources():
     async def _run():
+        from datetime import datetime, timedelta
+        now = datetime.utcnow()
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(Source).where(Source.active == True)
@@ -63,7 +62,9 @@ def fetch_all_sources():
             sources = result.scalars().all()
 
         for source in sources:
-            fetch_source.delay(source.id)
+            # Vérifie si l'heure actuelle est un multiple de l'intervalle
+            if now.hour % source.fetch_interval_hours == 0:
+                fetch_source.delay(source.id)
 
     run_async(_run())
 
@@ -171,8 +172,15 @@ def process_article(self, article_id: int):
 @app.task(name="workers.tasks.send_all_digests")
 def send_all_digests():
     async def _run():
+        from datetime import datetime
+        current_hour = datetime.utcnow().hour
         async with AsyncSessionLocal() as db:
-            result = await db.execute(select(Theme))
+            result = await db.execute(
+                select(Theme).where(
+                    Theme.digest_enabled == True,
+                    Theme.digest_hour == current_hour
+                )
+            )
             themes = result.scalars().all()
         for theme in themes:
             send_digest.delay(theme.id)
