@@ -15,7 +15,7 @@ from services.webhook import send_discord
 
 # ── Setup Celery ──────────────────────────────────────────
 
-app = Celery("watchllm")
+app = Celery("vigil")
 app.config_from_object({
     "broker_url": settings.celery_broker_url,
     "result_backend": settings.celery_result_backend,

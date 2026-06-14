@@ -4,7 +4,7 @@
 async def send_discord(webhook_url: str, content: str, theme_name: str) -> bool:
     """Envoie un message sur Discord via webhook."""
     payload = {
-        "username": "WatchLLM 🔍",
+        "username": "Vigil",
         "embeds": [
             {
                 "title": f"📡 Digest — {theme_name}",

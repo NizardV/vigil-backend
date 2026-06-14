@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="WatchLLM API",
+    title="Vigil API",
     description="Système de veille technologique automatisé avec scoring LLM",
     version="1.0.0",
     lifespan=lifespan,
