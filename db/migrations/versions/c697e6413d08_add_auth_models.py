@@ -55,6 +55,7 @@ def upgrade() -> None:
     )
 
     # Clear existing data before adding NOT NULL foreign keys
+    op.execute('DELETE FROM digests')
     op.execute('DELETE FROM feedbacks')
     op.execute('DELETE FROM webhooks')
     op.execute('DELETE FROM themes')
