@@ -82,11 +82,11 @@ def generate_verification_token() -> str:
 
 
 def verification_token_expires() -> datetime:
-    return datetime.now(timezone.utc) + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
+    return datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
 
 
 def refresh_token_expires() -> datetime:
-    return datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    return datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
 
 
 # ── Email ─────────────────────────────────────────────────
