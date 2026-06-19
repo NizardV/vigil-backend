@@ -31,3 +31,12 @@ python-dotenv==1.0.1
 # Discord
 PyNaCl==1.5.0
 
+# Auth
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+pyotp==2.9.0
+qrcode==7.4.2
+resend==2.4.0
+
+# Auth middleware
+python-multipart==0.0.9
