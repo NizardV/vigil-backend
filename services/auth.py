@@ -93,7 +93,7 @@ def refresh_token_expires() -> datetime:
 
 def send_verification_email(email: str, token: str) -> None:
     resend.api_key = settings.resend_api_key
-    verification_url = f"{settings.app_url}/auth/verify/{token}"
+    verification_url = f"{settings.app_url}/api/auth/verify/{token}"
     resend.Emails.send({
         "from": f"Vigil <{settings.resend_from_email}>",
         "to": email,
