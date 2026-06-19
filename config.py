@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     digest_hour: int = 7
     digest_minute: int = 0
 
+    # Resend
+    resend_api_key: str = ""
+    resend_from_email: str = "noreply@projet-cyna.fr"
+
+    # App
+    app_url: str = "https://vigil.projet-cyna.fr"
+
     class Config:
         env_file = ".env"
         case_sensitive = False

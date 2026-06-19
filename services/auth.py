@@ -1,0 +1,109 @@
+import uuid
+import secrets
+from datetime import datetime, timedelta, timezone
+
+import pyotp
+import qrcode
+import io
+import base64
+from jose import jwt, JWTError
+from passlib.context import CryptContext
+import resend
+
+from config import settings
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 30
+VERIFICATION_TOKEN_EXPIRE_HOURS = 24
+
+
+# ── Password ─────────────────────────────────────────────
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
+
+
+# ── JWT ──────────────────────────────────────────────────
+
+def create_access_token(user_id: uuid.UUID) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    payload = {"sub": str(user_id), "exp": expire, "type": "access"}
+    return jwt.encode(payload, settings.secret_key, algorithm="HS256")
+
+
+def create_refresh_token() -> str:
+    return secrets.token_urlsafe(64)
+
+
+def decode_access_token(token: str) -> uuid.UUID | None:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+        if payload.get("type") != "access":
+            return None
+        return uuid.UUID(payload["sub"])
+    except JWTError:
+        return None
+
+
+# ── TOTP ─────────────────────────────────────────────────
+
+def generate_totp_secret() -> str:
+    return pyotp.random_base32()
+
+
+def get_totp_uri(secret: str, email: str) -> str:
+    return pyotp.totp.TOTP(secret).provisioning_uri(
+        name=email,
+        issuer_name="Vigil"
+    )
+
+
+def generate_totp_qr(secret: str, email: str) -> str:
+    uri = get_totp_uri(secret, email)
+    img = qrcode.make(uri)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def verify_totp(secret: str, code: str) -> bool:
+    totp = pyotp.TOTP(secret)
+    return totp.verify(code, valid_window=1)
+
+
+# ── Email verification token ──────────────────────────────
+
+def generate_verification_token() -> str:
+    return secrets.token_urlsafe(64)
+
+
+def verification_token_expires() -> datetime:
+    return datetime.now(timezone.utc) + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
+
+
+def refresh_token_expires() -> datetime:
+    return datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+
+
+# ── Email ─────────────────────────────────────────────────
+
+def send_verification_email(email: str, token: str) -> None:
+    resend.api_key = settings.resend_api_key
+    verification_url = f"{settings.app_url}/auth/verify/{token}"
+    resend.Emails.send({
+        "from": f"Vigil <{settings.resend_from_email}>",
+        "to": email,
+        "subject": "Confirm your Vigil account",
+        "html": f"""
+        <h2>Welcome to Vigil</h2>
+        <p>Click the link below to confirm your account:</p>
+        <a href="{verification_url}">Confirm my account</a>
+        <p>This link expires in 24 hours.</p>
+        """
+    })

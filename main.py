@@ -7,7 +7,7 @@ from config import settings
 from db.session import engine, Base
 from db import models  # noqa: F401 — force SQLAlchemy à enregistrer les modèles
 
-from api.routes import sources, themes, articles, feedback, digests, webhooks, discord
+from api.routes import sources, themes, articles, feedback, digests, webhooks, discord, auth
 
 
 @asynccontextmanager
@@ -43,6 +43,7 @@ app.include_router(feedback.router, prefix="/api/feedback", tags=["Feedback"])
 app.include_router(digests.router,  prefix="/api/digests",  tags=["Digests"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(discord.router, prefix="/api/discord", tags=["Discord"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 
 
 @app.get("/health")
