@@ -7,12 +7,10 @@ import qrcode
 import io
 import base64
 from jose import jwt, JWTError
-from passlib.context import CryptContext
 import resend
+import bcrypt
 
 from config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 30
@@ -22,11 +20,11 @@ VERIFICATION_TOKEN_EXPIRE_HOURS = 24
 # ── Password ─────────────────────────────────────────────
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 # ── JWT ──────────────────────────────────────────────────
