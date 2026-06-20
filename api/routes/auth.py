@@ -35,7 +35,11 @@ class TOTPVerifyRequest(BaseModel):
     temp_token: str
     code: str
 
-class TOTPSetupVerifyRequest(BaseModel):
+class TOTPEnableRequest(BaseModel):
+    secret: str
+    code: str
+
+class TOTPDisableRequest(BaseModel):
     code: str
 
 class RefreshRequest(BaseModel):
@@ -132,11 +136,9 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=403, detail="Account disabled")
 
     if user.totp_enabled:
-        # Return a short-lived temp token to complete TOTP step
         temp_token = create_access_token(user.id)
         return {"requires_totp": True, "temp_token": temp_token}
 
-    # No TOTP — issue tokens directly
     access_token = create_access_token(user.id)
     refresh_token_value = create_refresh_token()
     db.add(RefreshToken(
@@ -177,21 +179,49 @@ async def totp_verify(body: TOTPVerifyRequest, db: AsyncSession = Depends(get_db
 
 @router.post("/totp/setup")
 async def totp_setup(current_user: User = Depends(get_current_user)):
+    if current_user.totp_enabled:
+        raise HTTPException(status_code=400, detail="TOTP already enabled")
     secret = generate_totp_secret()
     qr_base64 = generate_totp_qr(secret, current_user.email)
-    # Secret returned but not saved yet — user must confirm with a valid code
     return {"secret": secret, "qr_code": qr_base64}
 
 
 @router.post("/totp/enable")
 async def totp_enable(
-    body: TOTPSetupVerifyRequest,
+    body: TOTPEnableRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    # The secret was passed back by the client after /totp/setup
-    # In a real flow, store temp secret in Redis or signed JWT — simplified here
-    raise HTTPException(status_code=501, detail="Pass secret in body — see TOTPEnableRequest")
+    if current_user.totp_enabled:
+        raise HTTPException(status_code=400, detail="TOTP already enabled")
+
+    if not verify_totp(body.secret, body.code):
+        raise HTTPException(status_code=401, detail="Invalid TOTP code")
+
+    current_user.totp_secret = body.secret
+    current_user.totp_enabled = True
+    await db.commit()
+
+    return {"message": "TOTP enabled successfully"}
+
+
+@router.post("/totp/disable")
+async def totp_disable(
+    body: TOTPDisableRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if not current_user.totp_enabled:
+        raise HTTPException(status_code=400, detail="TOTP is not enabled")
+
+    if not verify_totp(current_user.totp_secret, body.code):
+        raise HTTPException(status_code=401, detail="Invalid TOTP code")
+
+    current_user.totp_secret = None
+    current_user.totp_enabled = False
+    await db.commit()
+
+    return {"message": "TOTP disabled successfully"}
 
 
 @router.post("/refresh", response_model=TokenResponse)
