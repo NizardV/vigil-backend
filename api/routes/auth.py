@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from db.session import get_db
 from db.models import User, RefreshToken, EmailVerificationToken
+from services.session import create_session, get_session, delete_session
 from services.auth import (
     hash_password, verify_password,
     create_access_token, create_refresh_token, decode_access_token,
@@ -49,7 +50,6 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
-
 
 # ── Dependencies ──────────────────────────────────────────
 
@@ -279,3 +279,37 @@ async def me(current_user: User = Depends(get_current_user)):
         "totp_enabled": current_user.totp_enabled,
         "created_at": current_user.created_at,
     }
+
+@router.post("/session")
+async def create_user_session(body: TokenResponse, response: Response):
+    session_id = await create_session(body.access_token, body.refresh_token)
+    response.set_cookie(
+        key="vigil_session_id",
+        value=session_id,
+        max_age=30 * 24 * 60 * 60,
+        httponly=True,
+        samesite="lax",
+        secure=True,
+        path="/",
+    )
+    return {"message": "Session created"}
+
+
+@router.get("/session/me")
+async def get_user_session(request: Request):
+    session_id = request.cookies.get("vigil_session_id")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="No session cookie")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Session not found or expired")
+    return session
+
+
+@router.delete("/session/me")
+async def delete_user_session(request: Request, response: Response):
+    session_id = request.cookies.get("vigil_session_id")
+    if session_id:
+        await delete_session(session_id)
+    response.delete_cookie(key="vigil_session_id", path="/")
+    return {"message": "Session deleted"}
