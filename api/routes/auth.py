@@ -292,7 +292,7 @@ async def create_user_session(body: TokenResponse, response: Response):
         secure=True,
         path="/",
     )
-    return {"message": "Session created"}
+    return {"message": "Session created", "session_id": session_id}
 
 
 @router.get("/session/me")
@@ -313,3 +313,10 @@ async def delete_user_session(request: Request, response: Response):
         await delete_session(session_id)
     response.delete_cookie(key="vigil_session_id", path="/")
     return {"message": "Session deleted"}
+
+@router.get("/session/{session_id}")
+async def get_session_by_id(session_id: str):
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+    return session
