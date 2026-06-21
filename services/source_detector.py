@@ -1,6 +1,5 @@
 import re
 import httpx
-from typing import tuple
 
 
 def detect_source_type(url: str) -> tuple[str, str]:
