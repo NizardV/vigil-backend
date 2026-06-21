@@ -5,7 +5,7 @@ from sqlalchemy import text
 from config import settings
 from db.session import engine, Base
 from db import models  # noqa: F401
-from api.routes import sources, themes, articles, feedback, digests, webhooks, discord, auth, login
+from api.routes import sources, themes, articles, feedback, digests, webhooks, discord, auth, login, login_otp, login_totp, register
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +32,9 @@ app.add_middleware(
 
 # Routes
 app.include_router(login.router, tags=["Login"])
+app.include_router(login_otp.router, tags=["Login OTP"])
+app.include_router(login_totp.router, tags=["Login TOTP"])
+app.include_router(register.router, tags=["Register"])
 app.include_router(themes.router,   prefix="/api/themes",   tags=["Themes"])
 app.include_router(sources.router,  prefix="/api/sources",  tags=["Sources"])
 app.include_router(articles.router, prefix="/api/articles", tags=["Articles"])
