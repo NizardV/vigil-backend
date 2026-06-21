@@ -105,8 +105,10 @@ async def login_submit(
             data = resp.json()
 
             if data.get("requires_totp"):
-                # TOTP à gérer plus tard
-                return RedirectResponse(url="/login?error=TOTP+not+supported+via+this+flow", status_code=302)
+                return RedirectResponse(
+                    url=f"/login/totp?temp_token={data['temp_token']}",
+                    status_code=302
+                )
 
             # Crée la session Redis
             async with httpx.AsyncClient() as client:
@@ -400,3 +402,135 @@ async def otp_verify_submit(
 
     finally:
         await r.aclose()
+
+# ─────────────────────────── TOTP Login ──────────────────────────────
+
+@router.get("/login/totp", response_class=HTMLResponse)
+async def totp_verify_page(temp_token: str, error: str = None):
+    error_html = f'<p class="error">{error}</p>' if error else ""
+    return HTMLResponse(content=f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vigil - Two-Factor Authentication</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0e1117;
+            color: #fafafa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }}
+        .container {{
+            background: #1a1d27;
+            padding: 2.5rem;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+        }}
+        h1 {{ font-size: 1.8rem; margin-bottom: 0.25rem; }}
+        .subtitle {{ color: #888; font-size: 0.9rem; margin-bottom: 2rem; }}
+        label {{ display: block; font-size: 0.85rem; color: #ccc; margin-bottom: 0.4rem; }}
+        input {{
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            background: #262730;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fafafa;
+            font-size: 1.5rem;
+            letter-spacing: 0.5rem;
+            text-align: center;
+            margin-bottom: 1.2rem;
+            outline: none;
+        }}
+        input:focus {{ border-color: #ff4b4b; }}
+        button {{
+            width: 100%;
+            padding: 0.75rem;
+            background: #ff4b4b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+        }}
+        .back {{ display: block; text-align: center; margin-top: 1rem; color: #888; font-size: 0.85rem; text-decoration: none; }}
+        .error {{ color: #ff4b4b; font-size: 0.85rem; margin-bottom: 1rem; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Vigil</h1>
+        <p class="subtitle">Enter the code from your authenticator app</p>
+        {error_html}
+        <form method="POST" action="/login/totp">
+            <input type="hidden" name="temp_token" value="{temp_token}">
+            <label>6-digit code</label>
+            <input type="text" name="code" maxlength="6" required autofocus placeholder="000000">
+            <button type="submit">Verify</button>
+        </form>
+        <a href="/login" class="back">← Back to login</a>
+    </div>
+</body>
+</html>
+""")
+
+
+@router.post("/login/totp")
+async def totp_verify_submit(
+    response: Response,
+    temp_token: str = Form(...),
+    code: str = Form(...)
+):
+    from services.auth import decode_access_token, verify_totp, create_access_token, create_refresh_token, refresh_token_expires
+    from services.session import create_session
+    from db.session import AsyncSessionLocal
+    from db.models import User, RefreshToken
+    from sqlalchemy import select
+
+    user_id = decode_access_token(temp_token)
+    if not user_id:
+        return RedirectResponse(url="/login?error=Invalid+or+expired+session", status_code=302)
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+    if not user or not user.totp_secret:
+        return RedirectResponse(url="/login?error=Invalid+request", status_code=302)
+
+    if not verify_totp(user.totp_secret, code):
+        return RedirectResponse(
+            url=f"/login/totp?temp_token={temp_token}&error=Invalid+code",
+            status_code=302
+        )
+
+    access_token = create_access_token(user.id)
+    refresh_token_value = create_refresh_token()
+
+    async with AsyncSessionLocal() as db:
+        db.add(RefreshToken(
+            user_id=user.id,
+            token=refresh_token_value,
+            expires_at=refresh_token_expires(),
+        ))
+        await db.commit()
+
+    session_id = await create_session(access_token, refresh_token_value)
+    redirect = RedirectResponse(url="/", status_code=302)
+    redirect.set_cookie(
+        key="vigil_session_id",
+        value=session_id,
+        max_age=30 * 24 * 60 * 60,
+        httponly=True,
+        samesite="lax",
+        secure=True,
+        path="/",
+    )
+    return redirect
