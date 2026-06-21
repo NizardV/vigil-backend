@@ -105,3 +105,35 @@ def send_verification_email(email: str, token: str) -> None:
         <p>This link expires in 24 hours.</p>
         """
     })
+
+# ── Email OTP ─────────────────────────────────────────────
+def generate_otp_code() -> str:
+    return str(secrets.randbelow(900000) + 100000)  # 6 chiffres
+
+async def store_otp(redis_client, email: str, code: str) -> None:
+    import json
+    await redis_client.setex(f"otp:{email}", 300, code)  # 5 minutes TTL
+
+async def verify_otp_code(redis_client, email: str, code: str) -> bool:
+    stored = await redis_client.get(f"otp:{email}")
+    if not stored:
+        return False
+    if stored == code:
+        await redis_client.delete(f"otp:{email}")
+        return True
+    return False
+
+def send_otp_email(email: str, code: str) -> None:
+    resend.api_key = settings.resend_api_key
+    resend.Emails.send({
+        "from": f"Vigil <{settings.resend_from_email}>",
+        "to": email,
+        "subject": "Your Vigil login code",
+        "html": f"""
+        <h2>Your login code</h2>
+        <p>Use this code to log in to Vigil:</p>
+        <h1 style="font-size: 2rem; letter-spacing: 0.5rem;">{code}</h1>
+        <p>This code expires in 5 minutes.</p>
+        <p>If you didn't request this, ignore this email.</p>
+        """
+    })
