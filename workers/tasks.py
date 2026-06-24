@@ -264,7 +264,6 @@ def send_digest(theme_id: int):
 
     run_async(_run())
 
-
 # ── Helper : contexte feedback ────────────────────────────
 
 async def _get_feedback_context(db, theme_id: int) -> str:
@@ -292,4 +291,19 @@ async def _get_feedback_context(db, theme_id: int) -> str:
         context += f"Articles non pertinents : {', '.join(disliked[:5])}\n"
 
     return context
+
+# ── Task : re-process pending articles ────────────────────────────
+
+@app.task(name="workers.tasks.process_all_pending")
+def process_all_pending():
+    """Re-process all unprocessed articles."""
+    async def _run():
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(Article).where(Article.processed == False)
+            )
+            articles = result.scalars().all()
+            for article in articles:
+                process_article.delay(article.id)
+    run_async(_run())
 
