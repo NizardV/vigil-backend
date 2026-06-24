@@ -1,5 +1,6 @@
 import uuid
-from fastapi.responses import RedirectResponse, Request, HTTPException
+from fastapi.responses import RedirectResponse
+from fastapi import Request, HTTPException
 from services.session import create_session, get_session
 
 BASE_CSS = """
