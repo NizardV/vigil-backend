@@ -1,5 +1,6 @@
-from fastapi.responses import RedirectResponse
-from services.session import create_session
+import uuid
+from fastapi.responses import RedirectResponse, Request, HTTPException
+from services.session import create_session, get_session
 
 BASE_CSS = """
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -98,3 +99,12 @@ async def create_session_redirect(access_token: str, refresh_token: str, redirec
         path="/",
     )
     return redirect
+
+async def get_current_user_id(request: Request) -> uuid.UUID:
+    session_id = request.cookies.get("vigil_session_id")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    session = await get_session(session_id)
+    if not session or "user_id" not in session:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    return uuid.UUID(session["user_id"])
