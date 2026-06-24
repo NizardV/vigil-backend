@@ -31,6 +31,25 @@ async def list_articles(
     result = await db.execute(query)
     return result.scalars().all()
 
+@router.get("/search/semantic", response_model=list[ArticleOut])
+async def semantic_search(
+    q: str,
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db)
+):
+    from services.embeddings import get_embedding
+    from db.models import Analysis
+
+    embedding = get_embedding(q)
+
+    result = await db.execute(
+        select(Article)
+        .options(selectinload(Article.analysis))
+        .join(Article.analysis)
+        .order_by(Analysis.embedding.l2_distance(embedding))
+        .limit(limit)
+    )
+    return result.scalars().all()
 
 @router.get("/{article_id}", response_model=ArticleOut)
 async def get_article(article_id: int, db: AsyncSession = Depends(get_db)):
