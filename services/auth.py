@@ -138,18 +138,3 @@ def send_otp_email(email: str, code: str) -> None:
         """
     })
 
-# ── Fetch user info ─────────────────────────────────────────────
-
-def fetch_user_info():
-try:
-    with httpx.Client() as client:
-        resp = client.get(
-            f"{API_URL}/auth/me",
-            cookies=get_cookies()
-        )
-    if resp.status_code == 200:
-        data = resp.json()
-        st.session_state["user_email"] = data["email"]
-        st.session_state["totp_enabled"] = data["totp_enabled"]
-except Exception:
-    pass
