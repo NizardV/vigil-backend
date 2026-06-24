@@ -9,12 +9,11 @@ PROMPT_VERSION = "v1.0"
 
 def _build_system_prompt(theme_name: str, keywords: list[str], feedback_context: str = "") -> str:
     keywords_str = ", ".join(keywords) if keywords else "not defined"
-
     base = (
         f'You are a tech watch assistant specialized on the theme: "{theme_name}".\n'
         f"Associated keywords: {keywords_str}.\n\n"
         "Your mission:\n"
-        "1. Summarize the article in 2-3 clear and concise sentences in French.\n"
+        "1. Summarize the article in 2-3 clear and concise sentences in English.\n"
         "2. Assign a relevance score from 1 to 10 based on the given theme.\n"
         "   - 1-3: off-topic or weakly related\n"
         "   - 4-6: partially relevant\n"
@@ -26,10 +25,8 @@ def _build_system_prompt(theme_name: str, keywords: list[str], feedback_context:
         '  "theme_match": "identified sub-theme"\n'
         '}'
     )
-
     if feedback_context:
         base += f"\n\nUser preference context (based on previous feedback):\n{feedback_context}"
-
     return base
 
 
@@ -78,7 +75,7 @@ async def generate_digest(articles: list[dict], theme_name: str) -> str:
     prompt = (
         f'Generate a daily tech watch digest on the theme: "{theme_name}".\n\n'
         f"Today's articles sorted by relevance:\n{articles_text}\n\n"
-        "Generate a structured summary in French with:\n"
+        "Generate a structured summary in English with:\n"
         "1. A one-sentence introduction on today's trends\n"
         "2. The 3 key takeaways\n"
         "3. A one-sentence conclusion\n\n"
