@@ -37,10 +37,12 @@ async def semantic_search(
     limit: int = 10,
     db: AsyncSession = Depends(get_db)
 ):
+    import asyncio
     from services.embeddings import get_embedding
     from db.models import Analysis
 
-    embedding = get_embedding(q)
+    # Exécuter get_embedding dans un thread pour ne pas bloquer la boucle async
+    embedding = await asyncio.get_event_loop().run_in_executor(None, get_embedding, q)
 
     result = await db.execute(
         select(Article)
