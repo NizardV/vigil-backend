@@ -14,13 +14,15 @@ def _build_system_prompt(theme_name: str, keywords: list[str], feedback_context:
         f"Associated keywords: {keywords_str}.\n\n"
         "Your mission:\n"
         "1. Summarize the article in 2-3 clear and concise sentences in English.\n"
-        "2. Assign a relevance score from 1 to 10 based on the given theme.\n"
+        "2. Extract 3 key bullet points that are useful for a developer or architect.\n"
+        "3. Assign a relevance score from 1 to 10 based on the given theme.\n"
         "   - 1-3: off-topic or weakly related\n"
         "   - 4-6: partially relevant\n"
         "   - 7-10: highly relevant, must-read article\n\n"
         "Respond ONLY with valid JSON, no markdown, no explanation:\n"
         '{\n'
         '  "summary": "article summary",\n'
+        '  "key_points": ["point 1", "point 2", "point 3"],\n'
         '  "relevance_score": 7.5,\n'
         '  "theme_match": "identified sub-theme"\n'
         '}'
@@ -57,6 +59,7 @@ async def analyze_article(
 
     return {
         "summary": result.get("summary", ""),
+        "key_points": result.get("key_points", []),
         "relevance_score": float(result.get("relevance_score", 5.0)),
         "theme_match": result.get("theme_match", theme_name),
         "llm_prompt_version": PROMPT_VERSION,

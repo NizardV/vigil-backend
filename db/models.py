@@ -128,6 +128,7 @@ class Analysis(Base):
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, default=datetime.utcnow)
 
     article: Mapped["Article"] = relationship(back_populates="analysis")
+    key_points: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
 
 
 class Feedback(Base):

@@ -41,6 +41,7 @@ class AnalysisOut(BaseModel):
     summary: str | None
     relevance_score: float | None
     theme_match: str | None
+    key_points: list[str] | None = None
     created_at: datetime
     class Config:
         from_attributes = True
