@@ -66,6 +66,22 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="User not found or inactive")
     return user
 
+async def get_current_user_from_session(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+) -> User:
+    session_id = request.cookies.get("vigil_session_id")
+    if not session_id:
+        raise HTTPException(status_code=403, detail="Not authenticated")
+    session = await get_session(session_id)
+    if not session or "user_id" not in session:
+        raise HTTPException(status_code=403, detail="Not authenticated")
+    user_id = uuid.UUID(session["user_id"])
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=403, detail="User not found or inactive")
+    return user
 
 # ── Routes ────────────────────────────────────────────────
 
@@ -271,7 +287,7 @@ async def logout(
 
 
 @router.get("/me")
-async def me(current_user: User = Depends(get_current_user)):
+async def me(current_user: User = Depends(get_current_user_from_session)):
     return {
         "id": str(current_user.id),
         "email": current_user.email,
