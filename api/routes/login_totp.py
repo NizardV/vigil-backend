@@ -29,14 +29,14 @@ async def totp_verify_page(temp_token: str, error: str = None):
 @router.post("/login/totp")
 async def totp_verify_submit(response: Response, temp_token: str = Form(...), code: str = Form(...)):
     from services.auth import (
-        decode_access_token, verify_totp,
+        decode_pending_2fa_token, verify_totp,
         create_access_token, create_refresh_token, refresh_token_expires
     )
     from db.session import AsyncSessionLocal
     from db.models import User, RefreshToken
     from sqlalchemy import select
 
-    user_id = decode_access_token(temp_token)
+    user_id = decode_pending_2fa_token(temp_token)
     if not user_id:
         return RedirectResponse(url="/login?error=Invalid+or+expired+session", status_code=302)
 

@@ -138,3 +138,17 @@ def send_otp_email(email: str, code: str) -> None:
         """
     })
 
+# ── Pending 2FA Token ───────────────────────────────────────
+def create_pending_2fa_token(user_id: uuid.UUID) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=5)  # courte durée de vie
+    payload = {"sub": str(user_id), "exp": expire, "type": "pending_2fa"}
+    return jwt.encode(payload, settings.secret_key, algorithm="HS256")
+
+def decode_pending_2fa_token(token: str) -> uuid.UUID | None:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+        if payload.get("type") != "pending_2fa":
+            return None
+        return uuid.UUID(payload["sub"])
+    except JWTError:
+        return None

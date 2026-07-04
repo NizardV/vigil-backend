@@ -152,7 +152,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=403, detail="Account disabled")
 
     if user.totp_enabled:
-        temp_token = create_access_token(user.id)
+        temp_token = create_pending_2fa_token(user.id)
         return {"requires_totp": True, "temp_token": temp_token}
 
     access_token = create_access_token(user.id)
@@ -169,7 +169,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 @router.post("/totp/verify", response_model=TokenResponse)
 async def totp_verify(body: TOTPVerifyRequest, db: AsyncSession = Depends(get_db)):
-    user_id = decode_access_token(body.temp_token)
+    user_id = decode_pending_2fa_token(body.temp_token)
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid temp token")
 
