@@ -13,6 +13,7 @@ from services.session import create_session, get_session, delete_session
 from services.auth import (
     hash_password, verify_password,
     create_access_token, create_refresh_token, decode_access_token,
+    create_pending_2fa_token, decode_pending_2fa_token,
     generate_totp_secret, generate_totp_qr, verify_totp,
     generate_verification_token, verification_token_expires, refresh_token_expires,
     send_verification_email
