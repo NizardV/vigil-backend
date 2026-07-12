@@ -10,7 +10,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from db.session import Base
-from db import models  # noqa: F401 - register all models
+from db import models, models_projects  # noqa: F401 - register all models
 from config import settings
 
 config = context.config

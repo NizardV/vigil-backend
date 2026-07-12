@@ -4,13 +4,14 @@ from contextlib import asynccontextmanager
 from sqlalchemy import text
 from config import settings
 from db.session import engine, Base
-from db import models  # noqa: F401
-from api.routes import sources, themes, articles, feedback, digests, webhooks, discord, auth, login, login_otp, login_totp, register
+from db import models, models_projects  # noqa: F401
+from api.routes import sources, themes, articles, feedback, digests, webhooks, discord, auth, login, login_otp, login_totp, register, projects, github_webhooks
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS projects"))
         await conn.run_sync(Base.metadata.create_all)
     yield
     await engine.dispose()
@@ -43,6 +44,8 @@ app.include_router(digests.router,  prefix="/api/digests",  tags=["Digests"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(discord.router,  prefix="/api/discord",  tags=["Discord"])
 app.include_router(auth.router,     prefix="/api/auth",     tags=["Auth"])
+app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])
+app.include_router(github_webhooks.router, prefix="/api/github-webhooks", tags=["GitHub Webhooks"])
 
 @app.get("/health")
 async def health():
