@@ -25,6 +25,17 @@ class Settings(BaseSettings):
     discord_public_key: str = ""
     discord_bot_token: str = ""
 
+    # Projects module - GitHub
+    github_token: str = ""
+    github_webhook_secret: str = ""
+
+    # Projects module - Notion
+    notion_api_key: str = ""
+    notion_projects_db_id: str = ""
+
+    # Projects module - Discord (digest event-driven dedie)
+    discord_projects_webhook_url: str = ""
+
     # Digest schedule
     digest_hour: int = 7
     digest_minute: int = 0

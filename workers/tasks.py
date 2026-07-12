@@ -307,3 +307,4 @@ def process_all_pending():
                 process_article.delay(article.id)
     run_async(_run())
 
+from workers import tasks_projects # noqa: E402, F401
