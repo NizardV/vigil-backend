@@ -2,6 +2,7 @@
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from config import settings
 from db.session import engine, Base
 from db import models, models_projects  # noqa: F401
@@ -9,10 +10,27 @@ from api.routes import sources, themes, articles, feedback, digests, webhooks, d
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # DDL "IF NOT EXISTS" en AUTOCOMMIT : avec --workers 2, les deux process
+    # peuvent tenter la creation en meme temps au premier boot. IF NOT EXISTS
+    # ne protege pas contre cette race (check-then-create non atomique cote
+    # Postgres), donc on catch l'erreur du perdant plutot que de laisser
+    # le worker crasher.
+    async with engine.connect() as conn:
+        autocommit_conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
+        for stmt in (
+            "CREATE EXTENSION IF NOT EXISTS vector",
+            "CREATE SCHEMA IF NOT EXISTS projects",
+        ):
+            try:
+                await autocommit_conn.execute(text(stmt))
+            except IntegrityError:
+                pass  # deja cree par l'autre worker, rien a faire
+
     async with engine.begin() as conn:
-        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS projects"))
-        await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.run_sync(Base.metadata.create_all)
+        except IntegrityError:
+            pass  # meme race que ci-dessus, sur une table cette fois
     yield
     await engine.dispose()
 
