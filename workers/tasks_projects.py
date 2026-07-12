@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timezone
+﻿from datetime import datetime
 
 from celery.schedules import crontab
 from sqlalchemy import select
@@ -48,7 +48,7 @@ def discover_repos():
                     owner, name = repo_data["full_name"].split("/", 1)
                     repo.webhook_id = await github.ensure_webhook(owner, name, callback_url)
 
-                repo.last_synced_at = datetime.now(timezone.utc)
+                repo.last_synced_at = datetime.utcnow()
 
             await db.commit()
 
@@ -78,7 +78,7 @@ def sync_notion_task(self, event_id: int):
                 event_count = len(count_result.scalars().all())
                 ok = await notion.sync_repo_activity(repo.notion_page_id, event.summary, event_count)
                 if ok:
-                    event.notion_synced_at = datetime.now(timezone.utc)
+                    event.notion_synced_at = datetime.utcnow()
 
             await db.commit()
 
@@ -112,7 +112,7 @@ def send_discord_event(event_id: int):
                 bot_token=settings.discord_bot_token,
             )
             if ok:
-                event.discord_sent_at = datetime.now(timezone.utc)
+                event.discord_sent_at = datetime.utcnow()
             await db.commit()
 
     run_async(_run())
