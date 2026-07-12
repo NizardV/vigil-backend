@@ -26,7 +26,7 @@ app.conf.beat_schedule["discover-repos-daily"] = {
 def discover_repos():
     async def _run():
         repos = await github.list_user_repos()
-        callback_url = f"{settings.app_url}/api/github-webhooks"
+        callback_url = f"{settings.app_url}/api/github-webhooks/"
 
         async with AsyncSessionLocal() as db:
             for repo_data in repos:
